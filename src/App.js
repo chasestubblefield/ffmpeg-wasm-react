@@ -4,24 +4,39 @@ import './App.css';
 
 function App() {
   const [videoSrc, setVideoSrc] = useState('');
+  const [inputFile, setInputFile] = useState(null);
   const [message, setMessage] = useState('Click Start to transcode');
   const ffmpeg = createFFmpeg({
     log: true,
   });
+  const handleChange = (event) => {
+    const input = event.target;
+    if (input.type === 'file' && input.files && !!input.files.length) {
+      setInputFile(input.files[0]);
+    }
+  };
   const doTranscode = async () => {
+    if (!inputFile) return;
     setMessage('Loading ffmpeg-core.js');
     await ffmpeg.load();
     setMessage('Start transcoding');
-    ffmpeg.FS('writeFile', 'test.avi', await fetchFile('/flame.avi'));
-    await ffmpeg.run('-i', 'test.avi', 'test.mp4');
+    ffmpeg.FS('writeFile', 'input_file', await fetchFile(inputFile));
+    await ffmpeg.run('-i', 'input_file', 'output.mp4');
     setMessage('Complete transcoding');
-    const data = ffmpeg.FS('readFile', 'test.mp4');
+    const data = ffmpeg.FS('readFile', 'output.mp4');
     setVideoSrc(URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' })));
   };
   return (
     <div className="App">
-      <p/>
-      <video src={videoSrc} controls></video><br/>
+      <input type="file" onChange={handleChange} />
+      {videoSrc && (
+        <>
+          <video src={videoSrc} controls></video>
+          <div>
+            <a href={videoSrc} download="output.mp4">Download video</a>
+          </div>
+        </>
+      )}
       <button onClick={doTranscode}>Start</button>
       <p>{message}</p>
     </div>
